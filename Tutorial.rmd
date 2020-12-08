@@ -1,0 +1,226 @@
+---
+title: "Tuto_package"
+author: "Amélie Picard and Baptiste Lanoue"
+date: "07/12/2020"
+output: 
+  md_document:
+  html_document:
+    df_print: paged
+---
+
+
+This vignette gives a high level overview on how to use the clustyanaly R package
+```{r setup}
+library(clustyanaly)
+
+```
+Use clustyanaly index
+------------------------
+
+We will show you how we can use internal index from the package 
+
+
+```{r}
+data("iris")
+df <- iris
+head(df, 3)
+```
+We will use iris data and we predict a kmean with cluster = 5
+parameter must be a data frame and vector
+
+```{r}
+fit <- kmeans(scale(df[, -5]), 5)
+clust <- fit$cluster
+clust <- as.vector(clust)
+df <- as.data.frame(scale(df[, -5]))
+```
+Silhouette index
+-----------------
+
+You can evaluate the silhouette index for each point of the data frame, cluster and general 
+Value are beetween -1 and 1
+```{r}
+silhouette(df,clust)
+```
+
+You can also choose a distance 
+```{r}
+silhouette(df,clust,"manhattan")
+```
+Davies bouldin index
+---------------------
+
+You can evaluate the Davies_bouldin index
+the lower the value, the better is the clustering
+```{r}
+davies_bouldin(df,clust)
+```
+You can also choose a distance 
+```{r}
+davies_bouldin(df,clust,"maximum")
+```
+Dunn index
+-----------
+
+You can evaluate the Dunn index
+the higher the value, the better is the clustering
+You have different evaluation of Dunn in function of the distance beetwenn cluster(mean,max,min)
+```{r}
+dunn(df,clust)
+```
+You can also choose a distance 
+```{r}
+dunn(df,clust,"canberra")
+```
+Variance index
+-----------------
+
+You can evaluate different variance index like calinski_harabasz coefficient, Ball_hall coefficient, Hartigan coefficient and Xu coefficient.
+```{r}
+variance_index(df,clust)
+
+```
+Example with Davies Bouldin index
+-----------------------------------
+
+We can find the best number cluster for our model with Davies Bouldin index for example
+```{r}
+fit <- kmeans(scale(df[, -5]), 5)
+clust <- fit$cluster
+clust <- as.vector(clust)
+df <- as.data.frame(scale(df[, -5]))
+DB_id <- c()
+for (k in 2:20){
+  fit <- kmeans(scale(df[, -5]), k)
+  clust <- fit$cluster
+  clust <- as.vector(clust)
+  DB_id <- append(DB_id ,davies_bouldin(df,clust))
+}
+cluster_number <- c(2:20)
+plot(cluster_number,DB_id)  
+```
+
+Tutorial for univariate and multivariate characterization
+-----------------------------------------------------------
+
+We are going to graphically represent three datasets. We take for this tutorial a data frame with quantitative variable "mtcars", a data frame with qualitative variable "canine" and finally a data frame with both type of data "small_apb".
+
+Load data :
+
+The data frame "canines" and "small_apb" have already a column with the class value of individuals. It's the last column of the data frame. 
+
+Load the canines data : 
+```{r}
+#group variable :
+groupe_canines<-canines[8]
+#analysis variables
+df_canines<-canines[c(-1,-8)]
+rownames(df_canines)<-canines[,1]
+```
+
+Load the small_apb data : 
+```{r}
+#group variable :
+apb_groupe<-small_apb[,length(small_apb)]
+#analysis variables
+apb<-small_apb[c(-1,-length(small_apb))]
+```
+
+The data frame "mtcars" does not have columns representing groups of individuals. We are therefore going to make a hierarchical ascending classification (hac) to create groups.
+
+Load the mtcars data:
+```{r}
+#center and reduce data
+mtcars.cr <- scale(mtcars,center=T,scale=T)
+#calculating of distance
+d.mtcars <- dist(mtcars.cr)
+#hierarchical ascending classification with method ward
+cah.ward2 <- hclust(d.mtcars,method="ward.D2")
+
+#group variable with 4 class:
+groupes.cah2 <- cutree(cah.ward2,k=4)
+#analysis variables : mtcars
+
+```
+
+
+
+Creation of type 'ClusteringData' :
+------------------------------------
+
+Thanks to the function "data_manager()", we can create an object of class 'ClusteringData'. This object allows you to simply use the other functions accessible from the package.
+
+```{r}
+#for canine data
+canine_objet<-data_manager(df_canines,groupe_canines)
+#for mtcars data
+cars<-data_manager(mtcars,groupes.cah2)
+#for small_apb data
+apb_objet<-data_manager(apb,apb_groupe)
+```
+
+Display data graphs univariate
+-------------------------------
+
+Display data graphs univariate by data type (quantitative or qualitative variables). If the data has both types of data, all graphs are displayed, else only the corresponding graphs are displayed.
+
+For qualitative data :
+```{r}
+#for canine data
+get_graph_car_univ(canine_objet)
+```
+
+For quantitative data : 
+```{r}
+#for mtcars data
+get_graph_car_univ(cars)
+```
+
+For mixed data : 
+```{r}
+#For small_apb data
+get_graph_car_univ(apb_objet)
+```
+
+For a better analysis of quantitative variables, it's possible to display matching graphics
+
+```{r}
+#For small_apb data
+get_graph_car_univ(apb_objet,choice_graph = "quanti")
+
+```
+
+
+Display data graphs multivariate
+----------------------------------
+
+Display data graphs multivariate according to factor analysis performed.
+
+For qualitative data :
+```{r}
+mca_graph(canine_objet)
+```
+
+For quantitative data : 
+```{r}
+pca_graph(cars)
+```
+
+For mixed data : 
+```{r}
+famd_graph(apb_objet)
+```
+
+Some features are modifiable like, which graphic it is possible to display, and which dimension of factor analysis is to represent or the colors of the graphics. 
+Note : that the color vector must have at least the same number of colors as the data has classes.
+
+Example : 
+----------
+
+We want to see the graphs, for mixed data, containing information on individuals. And for AFMD dimensions 1 and 3. 
+
+```{r}
+famd_graph(apb_objet,axes = c(1,3),graph = c("ind","indpvar"))
+```
+
+
